@@ -1,0 +1,11 @@
+name: AuctionHouse
+api: 2.0.0
+main: R4KT\AuctionHouse
+version: 1.0
+author: "R4KT"
+authors: ["Skull3x", "Muqsit"]
+website: http://github.com/R4KT
+commands:
+  ah:
+    description: "Auction house hub command."
+    aliases: ["auction", "auctionhouse"]
