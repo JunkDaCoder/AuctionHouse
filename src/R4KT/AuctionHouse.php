@@ -24,10 +24,11 @@ use pocketmine\Player;
 class AuctionHouse extends PluginBase {
 
     protected $auctions = [];
+    protected $bids = [];
 
     public function onLoad() {
        @mkdir($this->getDataFolder());
-        $fileExistancy = array('config.yml', 'auctions.json');
+        $fileExistancy = array('config.yml', 'auctions.json', 'bids.json');
         foreach ($fileExistancy as $file) {
             if (!file_exists($this->getDataFolder() . $file)) {
                 file_put_contents($this->getDataFolder() . $file, $this->getResource($file));
@@ -55,23 +56,31 @@ class AuctionHouse extends PluginBase {
     * loss.
     */
     public function saveEverything() {
+        unlink($this->getDataFolder().'bids.json'); //Avoiding duplication glitches.
         unlink($this->getDataFolder().'auctions.json'); //Avoiding duplication glitches.
         $data = new Config($this->getDataFolder() . 'auctions.json', Config::JSON);
-        foreach ($this->auctions as $aucId => $aucData) {
+        $data2 = new Config($this->getDataFolder() . 'bids.json', Config::JSON);
+        $files = array($data, $data2);
+        foreach ($this->auctions as $aucId => $aucData and $this->bids as $bidId => $bidData) {
             $data->set($aucId, $aucData);
+            $data2->set($bidId, $bidData);
         }
-        $data->save();
+        $files->save();
     }
 
     /**
     * Loads everything that was saved in
-    * 'auctions.json'.
+    * 'auctions.json' and 'bids.json'.
     */
     public function loadEverything()
     {
         $data = new Config($this->getDataFolder() . 'auctions.json', Config::JSON);
+        $data2 = new Config($this->getDataFolder() . 'bids.json', Config::JSON);
         foreach ($data->getAll() as $aucId => $aucData) {
             $this->auctions[$aucId] = $aucData;
+        }
+        foreach ($data2->getAll() as $bidId => $bidData) {
+            $this->bids[$bidId] = $bidData;
         }
     }
 
@@ -87,6 +96,15 @@ class AuctionHouse extends PluginBase {
         $i = 0;
         foreach ($this->auctions as $id => $data) {
             if ($i > 10) return true;
+            $player->sendMessage(TF::AQUA.'ID'.$id.'  =>  '.TF::YELLOW.$data['name'].'(x'.$data['count'].') for $'.$data['price'].' by '.TF::GREEN.$data['seller']);
+            ++$i;
+        }
+    }
+    
+    public function sendBidList(Player $player) {
+        $b = 0;
+        foreach ($this->bids as $id => $data) {
+            if ($b > 10) return true;
             $player->sendMessage(TF::AQUA.'ID'.$id.'  =>  '.TF::YELLOW.$data['name'].'(x'.$data['count'].') for $'.$data['price'].' by '.TF::GREEN.$data['seller']);
             ++$i;
         }
@@ -201,6 +219,39 @@ class AuctionHouse extends PluginBase {
             $player->sendMessage(self::prefix(false).'The auction with the ID ('.$aucId.') cannot be found.');
         }
     }
+    
+    public function addBid($player, $price) {
+        $name = strtolower($player->getName());
+        $auction = $this->auctions[$aucId];
+        $biddata = [
+            'bidder' => $name,
+            'amount' => $price
+        ];
+        $this->bids[$bidId] = $biddata;
+        $player->sendMessage(self::prefix().'You have successfully placed a bid of $'.$price);
+        
+        if (isset($this->bids[$bidId])) {
+            $bid = $this->bids[$bidId];
+            $amount = $biddata['amount'];
+            $money = EconomyAPI::getInstance()->myMoney($player);
+
+            if ($money <= Data::MINIMUM_BID_AMOUNT) {
+                $player->sendMessage(self::prefix(false)."The minimum auction bidding amount is ". Data::MINIMUM_BID_AMOUNT);
+                return false;
+            } else EconomyAPI::getInstance()->reduceMoney($player, $biddata['amount']);
+
+            $bidder = $this->getServer()->getPlayer($biddata['bidder']);
+            $seller = $this->getServer()->getPlayer($auction['seller']);
+            $player->sendMessage(self::prefix().'You have successfully placed a bid on that auction.');
+            if ($bidder instanceof Player and $seller instanceof Player) {
+               $seller->sendMessage(self::prefix().$bidder->getName().' has placed a bid of '.$biddata['amount'].' on your auction.');
+            }
+            unset($this->auctions[$aucId]);
+            unset($this->bids[$bidId]);
+        } else {
+            $player->sendMessage(self::prefix(false).'The auction with the ID ('.$aucId.') cannot be found.');
+        }
+    }
 
     /**
     * Auction commands.
@@ -224,6 +275,13 @@ class AuctionHouse extends PluginBase {
                             $sender->sendMessage(TF::AQUA.'/ah sell '.TF::GRAY.'<price>'.PHP_EOL.TF::GRAY.'Put the item you are currently holding, in auction for '.TF::YELLOW.'$<price>');
                         }
                         break;
+                    case 'bid':
+                        if (isset($args[1])) {
+                                $this->addBid($args[1], $sender);
+                            }
+                        } else {
+                            $sender->sendMessage(TF::AQUA.'/ah bid '.TF::GRAY.'<auctionID> <amount>'.PHP_EOL.TF::GRAY.'Place a bid in auction for '.TF::YELLOW.'$<amount>');
+                        }
                     case 'buy':
                         if (isset($args[1])) {
                             $this->buyAuction($args[1], $sender);
