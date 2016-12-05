@@ -105,8 +105,8 @@ class AuctionHouse extends PluginBase {
         $b = 0;
         foreach ($this->bids as $id => $data) {
             if ($b > 10) return true;
-            $player->sendMessage(TF::AQUA.'ID'.$id.'  =>  '.TF::YELLOW.$data['name'].'(x'.$data['count'].') for $'.$data['price'].' by '.TF::GREEN.$data['seller']);
-            ++$i;
+            $player->sendMessage(TF::AQUA.'ID'.$id.'  =>  '.TF::YELLOW.$data['bidder'].' for $'.$data['price'].' by '.TF::GREEN.$data['bidder']);
+            ++$b;
         }
     }
 
