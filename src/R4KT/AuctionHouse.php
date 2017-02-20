@@ -61,12 +61,15 @@ class AuctionHouse extends PluginBase {
         $data = new Config($this->getDataFolder() . 'auctions.json', Config::JSON);
         $data2 = new Config($this->getDataFolder() . 'bids.json', Config::JSON);
         $files = array($data, $data2);
-        foreach ($this->auctions as $aucId => $aucData and $this->bids as $bidId => $bidData) {
+        foreach ($this->auctions as $aucId => $aucData ) {
+            foreach($this->bids as $bidId => $bidData)
+            {
             $data->set($aucId, $aucData);
             $data2->set($bidId, $bidData);
         }
         $files->save();
     }
+}
 
     /**
     * Loads everything that was saved in
@@ -275,11 +278,14 @@ class AuctionHouse extends PluginBase {
                             $sender->sendMessage(TF::AQUA.'/ah sell '.TF::GRAY.'<price>'.PHP_EOL.TF::GRAY.'Put the item you are currently holding, in auction for '.TF::YELLOW.'$<price>');
                         }
                         break;
+                    
+                
+
                     case 'bid':
                         if (isset($args[1])) {
                                 $this->addBid($args[1], $sender);
                             }
-                        } else {
+                         else {
                             $sender->sendMessage(TF::AQUA.'/ah bid '.TF::GRAY.'<auctionID> <amount>'.PHP_EOL.TF::GRAY.'Place a bid in auction for '.TF::YELLOW.'$<amount>');
                         }
                     case 'buy':
